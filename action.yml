@@ -1,0 +1,54 @@
+name: Pinax Code Quality
+description: Runs flake8, isort, and unit tests across a supported set of Python/Django versions
+jobs:
+  lint:
+    name: Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.9
+
+      - name: isort
+        uses: jamescurtin/isort-action@master
+
+      - name: Lints
+        uses: py-actions/flake8@v1
+        with:
+          args: "--config tox.ini"
+
+
+  test:
+    name: Testing
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: [3.6, 3.7, 3.8, 3.9, "3.10"]
+        django: [2.2.*, 3.2.*]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install Django and Testing Tools
+        run: |
+          pip install Django==${{ matrix.django }} coverage pytest django-test-plus
+          pip install .
+
+      - name: Running Python Tests
+        run: coverage run runtests.py
+
+      - name: Upload Coverage Report
+        if: matrix.django == '3.2.*' && matrix.python == '3.10'
+        run: |
+          pip install codecov
+          coverage xml
+          codecov --required -X search gcov pycov -f coverage.xml
